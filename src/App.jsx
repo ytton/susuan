@@ -457,8 +457,24 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (shortcutDialogOpen && captureShortcutActionId) {
-      const onCaptureKeyDown = (event) => {
+    if (shortcutDialogOpen) {
+      const onShortcutDialogKeyDown = (event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault()
+
+          if (captureShortcutActionId) {
+            setCaptureShortcutActionId(null)
+          } else {
+            setShortcutDialogOpen(false)
+          }
+
+          return
+        }
+
+        if (!captureShortcutActionId) {
+          return
+        }
+
         if (event.ctrlKey || event.metaKey || event.altKey) {
           return
         }
@@ -468,11 +484,6 @@ function App() {
         }
 
         event.preventDefault()
-
-        if (event.key === 'Escape') {
-          setCaptureShortcutActionId(null)
-          return
-        }
 
         if (isReservedAnswerKey(event)) {
           setToast('数字键保留给答题输入，请换一个按键')
@@ -502,8 +513,8 @@ function App() {
         setToast('快捷键已更新')
       }
 
-      window.addEventListener('keydown', onCaptureKeyDown)
-      return () => window.removeEventListener('keydown', onCaptureKeyDown)
+      window.addEventListener('keydown', onShortcutDialogKeyDown)
+      return () => window.removeEventListener('keydown', onShortcutDialogKeyDown)
     }
 
     if (view !== 'practice' && view !== 'results') {
@@ -522,18 +533,6 @@ function App() {
       if (view === 'practice' && /^\d$/.test(event.key)) {
         event.preventDefault()
         appendDigit(event.key)
-        return
-      }
-
-      if (view === 'practice' && event.key === 'Backspace') {
-        event.preventDefault()
-        deleteDigit()
-        return
-      }
-
-      if (view === 'practice' && (event.key === 'Delete' || event.key === 'Escape')) {
-        event.preventDefault()
-        clearAnswer()
         return
       }
 

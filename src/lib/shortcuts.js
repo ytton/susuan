@@ -116,7 +116,11 @@ export function isModifierOnlyEvent(event) {
 }
 
 export function isReservedAnswerKey(event) {
-  return /^\d$/.test(event.key) || /^Digit\d$/.test(event.code) || /^Numpad\d$/.test(event.code)
+  return (
+    /^\d$/.test(event.key) ||
+    /^Digit\d$/.test(event.code) ||
+    /^Numpad\d$/.test(event.code)
+  )
 }
 
 export function matchesShortcut(event, shortcutCode) {
@@ -149,8 +153,4 @@ export function getShortcutLabel(code) {
   }
 
   return code
-}
-
-export function getShortcutActionLabel(actionId) {
-  return SHORTCUT_ACTIONS.find((action) => action.id === actionId)?.label || actionId
 }
