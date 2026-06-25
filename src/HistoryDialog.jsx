@@ -264,7 +264,7 @@ function buildHistoryView(history, range) {
 function GrowthChart({ buckets, range }) {
   if (!buckets.length) {
     return (
-      <div className="mt-4 flex min-h-80 items-center justify-center rounded-lg border border-dashed border-zinc-200 bg-zinc-50 text-sm font-semibold text-zinc-500">
+      <div className="mt-4 flex min-h-96 items-center justify-center rounded-lg border border-dashed border-zinc-200 bg-zinc-50 text-sm font-semibold text-zinc-500">
         先练几次，这里会显示速度趋势
       </div>
     )
@@ -280,7 +280,7 @@ function GrowthChart({ buckets, range }) {
   return (
     <div className="mt-4">
       <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-        <div className="h-[280px] w-full">
+        <div className="h-[360px] w-full sm:h-[420px] lg:h-[480px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
               data={chartData}
@@ -375,11 +375,12 @@ export default function HistoryDialog({
             />
             <StatPill label="总用时" value={formatDuration(grouped.totalMs)} />
           </div>
-          <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+
+          <div className="space-y-4">
             <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="font-black text-zinc-950">速度趋势</div>
-                <div className="inline-flex rounded-lg border border-zinc-200 bg-zinc-50 p-1">
+                <div className="inline-flex flex-wrap rounded-lg border border-zinc-200 bg-zinc-50 p-1">
                   {rangeOptions.map((item) => (
                     <button
                       key={item.id}
@@ -398,7 +399,7 @@ export default function HistoryDialog({
             </section>
 
             <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-              <div className="mb-3 flex items-center justify-between">
+              <div className="mb-3 flex items-center justify-between gap-3">
                 <div className="font-black text-zinc-950">
                   {range === 'today' ? '当日记录' : '每日记录'}
                 </div>
