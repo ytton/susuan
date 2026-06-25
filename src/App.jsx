@@ -11,6 +11,7 @@ import {
   MAX_ANSWER_LENGTH,
   MODE_MAP,
   MODES,
+  STORAGE_SETTINGS,
   STORAGE_SOUND,
   getAccentClasses,
   getCarryLabel,
