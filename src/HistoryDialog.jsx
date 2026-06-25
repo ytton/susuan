@@ -9,12 +9,18 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import IconButton from './components/ui/IconButton.jsx'
+import StatPill from './components/ui/StatPill.jsx'
 
 const HISTORY_RANGE_LIMITS = {
   today: 30,
   day: 14,
   week: 12,
   month: 12,
+}
+
+function pad(value) {
+  return String(value).padStart(2, '0')
 }
 
 function formatDuration(ms) {
@@ -44,34 +50,40 @@ function formatDateLabel(timestamp) {
 
 function formatDateKey(timestamp) {
   const date = new Date(timestamp)
-  return date.toISOString().slice(0, 10)
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
 function getISOWeek(date) {
   const target = new Date(date.valueOf())
-  const dayNr = (date.getUTCDay() + 6) % 7
+  const dayNr = (target.getUTCDay() + 6) % 7
   target.setUTCDate(target.getUTCDate() - dayNr + 3)
   const firstThursday = target.valueOf()
   target.setUTCMonth(0, 1)
+
   if (target.getUTCDay() !== 4) {
     target.setUTCMonth(0, 1 + ((4 - target.getUTCDay() + 7) % 7))
   }
+
   return 1 + Math.ceil((firstThursday - target) / 604800000)
 }
 
 function getWeekKey(timestamp) {
-  const date = new Date(timestamp)
+  const localDate = new Date(timestamp)
   const utcDate = new Date(
-    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+    Date.UTC(
+      localDate.getFullYear(),
+      localDate.getMonth(),
+      localDate.getDate(),
+    ),
   )
   const day = utcDate.getUTCDay() || 7
   utcDate.setUTCDate(utcDate.getUTCDate() + 4 - day)
-  return `${utcDate.getUTCFullYear()}-W${String(getISOWeek(utcDate)).padStart(2, '0')}`
+  return `${utcDate.getUTCFullYear()}-W${pad(getISOWeek(utcDate))}`
 }
 
 function getMonthKey(timestamp) {
   const date = new Date(timestamp)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}`
 }
 
 function getRangeKey(timestamp, range) {
@@ -98,29 +110,6 @@ function getRangeLabel(key, range) {
   }
 
   return key.slice(5).replace('-', '/')
-}
-
-function StatPill({ label, value }) {
-  return (
-    <div className="rounded-lg border border-zinc-200 bg-white px-3 py-2 shadow-sm">
-      <div className="text-xs font-medium text-zinc-500">{label}</div>
-      <div className="text-lg font-black text-zinc-950">{value}</div>
-    </div>
-  )
-}
-
-function IconButton({ children, label, onClick }) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-900 shadow-sm transition active:scale-[0.96] active:bg-zinc-50"
-    >
-      {children}
-    </button>
-  )
 }
 
 function HistoryItem({ mode, session }) {
@@ -155,7 +144,7 @@ function HistoryItem({ mode, session }) {
       </div>
       <div className="mt-2 flex items-center justify-between text-xs font-semibold text-zinc-500">
         <span>{session.records?.length || session.totalCount} 题</span>
-        <span>均速 {formatDuration(avgPerQuestionMs)}</span>
+        <span>平均每题 {formatDuration(avgPerQuestionMs)}</span>
       </div>
     </div>
   )
@@ -194,22 +183,22 @@ function buildHistoryView(history, range) {
         ]
       : []
 
+    const totalQuestions = todaySessions.reduce(
+      (sum, session) => sum + (session.totalCount || 0),
+      0,
+    )
+    const totalMs = todaySessions.reduce(
+      (sum, session) => sum + (session.totalMs || 0),
+      0,
+    )
+
     return {
       buckets,
       days,
       totalSessions: todaySessions.length,
-      totalQuestions: todaySessions.reduce(
-        (sum, session) => sum + (session.totalCount || 0),
-        0,
-      ),
-      totalMs: todaySessions.reduce((sum, session) => sum + (session.totalMs || 0), 0),
-      avgPerQuestionMs: todaySessions.reduce(
-        (sum, session) => sum + (session.totalCount || 0),
-        0,
-      )
-        ? todaySessions.reduce((sum, session) => sum + (session.totalMs || 0), 0) /
-          todaySessions.reduce((sum, session) => sum + (session.totalCount || 0), 0)
-        : 0,
+      totalQuestions,
+      totalMs,
+      avgPerQuestionMs: totalQuestions ? totalMs / totalQuestions : 0,
     }
   }
 
@@ -256,19 +245,19 @@ function buildHistoryView(history, range) {
     .sort((a, b) => b.key.localeCompare(a.key))
     .slice(0, 10)
 
+  const totalQuestions = sorted.reduce(
+    (sum, session) => sum + (session.totalCount || 0),
+    0,
+  )
+  const totalMs = sorted.reduce((sum, session) => sum + (session.totalMs || 0), 0)
+
   return {
     buckets,
     days,
     totalSessions: sorted.length,
-    totalQuestions: sorted.reduce((sum, session) => sum + (session.totalCount || 0), 0),
-    totalMs: sorted.reduce((sum, session) => sum + (session.totalMs || 0), 0),
-    avgPerQuestionMs: sorted.reduce(
-      (sum, session) => sum + (session.totalCount || 0),
-      0,
-    )
-      ? sorted.reduce((sum, session) => sum + (session.totalMs || 0), 0) /
-        sorted.reduce((sum, session) => sum + (session.totalCount || 0), 0)
-      : 0,
+    totalQuestions,
+    totalMs,
+    avgPerQuestionMs: totalQuestions ? totalMs / totalQuestions : 0,
   }
 }
 
@@ -367,7 +356,9 @@ export default function HistoryDialog({
         <header className="flex items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4 py-3">
           <div>
             <div className="text-sm font-semibold text-zinc-500">{mode?.title}</div>
-            <h2 className="text-xl font-black text-zinc-950">练习历史与成长曲线</h2>
+            <h2 className="text-xl font-black text-zinc-950">
+              练习历史与成长曲线
+            </h2>
           </div>
           <IconButton label="关闭" onClick={onClose}>
             <X size={21} />
@@ -378,7 +369,10 @@ export default function HistoryDialog({
           <div className="mb-4 grid gap-2 sm:grid-cols-4">
             <StatPill label="总练习" value={grouped.totalSessions} />
             <StatPill label="总题数" value={grouped.totalQuestions} />
-            <StatPill label="平均每题" value={formatDuration(grouped.avgPerQuestionMs)} />
+            <StatPill
+              label="平均每题"
+              value={formatDuration(grouped.avgPerQuestionMs)}
+            />
             <StatPill label="总用时" value={formatDuration(grouped.totalMs)} />
           </div>
           <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
