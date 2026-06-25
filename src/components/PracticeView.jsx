@@ -12,6 +12,7 @@ import {
   VolumeX,
 } from 'lucide-react'
 import IconButton from './ui/IconButton.jsx'
+import { getShortcutLabel } from '../lib/shortcuts.js'
 
 function Metric({ icon, label, value }) {
   return (
@@ -102,11 +103,13 @@ export default function PracticeView({
   onDelete,
   onGoHome,
   onOpenSettings,
+  onOpenShortcutMap,
   onRestart,
   onSubmit,
   onToggleDesktopKeypad,
   problem,
   quantity,
+  shortcutBindings,
   showDesktopKeypad,
   soundEnabled,
   toggleSound,
@@ -132,6 +135,20 @@ export default function PracticeView({
               style={{ width: `${progress}%` }}
             />
           </div>
+        </div>
+        <div className="hidden items-center gap-2 lg:flex">
+          <button
+            type="button"
+            onClick={onOpenShortcutMap}
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-black text-zinc-900 shadow-sm transition active:scale-[0.96] active:bg-zinc-50"
+            title="快捷键映射"
+          >
+            <Keyboard size={18} />
+            <span>快捷键</span>
+            <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs font-black text-zinc-600">
+              {getShortcutLabel(shortcutBindings.restart)}
+            </span>
+          </button>
         </div>
         <IconButton
           label={soundEnabled ? '关闭声音' : '开启声音'}

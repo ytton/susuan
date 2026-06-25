@@ -4,6 +4,7 @@ import HomeView from './components/HomeView.jsx'
 import PracticeView from './components/PracticeView.jsx'
 import SettingsDialog from './components/SettingsDialog.jsx'
 import SummaryDialog from './components/SummaryDialog.jsx'
+import ShortcutDialog from './components/ShortcutDialog.jsx'
 import {
   HISTORY_RANGES,
   DIGITS,
@@ -33,6 +34,16 @@ import {
   createAudioEngine,
   preloadSoundBuffer,
 } from './lib/audio.js'
+import {
+  DEFAULT_SHORTCUT_BINDINGS,
+  STORAGE_SHORTCUTS,
+  createInitialShortcutBindings,
+  isModifierOnlyEvent,
+  isReservedAnswerKey,
+  matchesShortcut,
+  normalizeShortcutEvent,
+  sanitizeShortcutBindings,
+} from './lib/shortcuts.js'
 const LazyHistoryDialog = lazy(() => import('./HistoryDialog.jsx'))
 
 function App() {
@@ -53,9 +64,14 @@ function App() {
   const [historyViewRange, setHistoryViewRange] = useState('day')
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [historyModeId, setHistoryModeId] = useState(null)
+  const [shortcutDialogOpen, setShortcutDialogOpen] = useState(false)
+  const [captureShortcutActionId, setCaptureShortcutActionId] = useState(null)
   const [toast, setToast] = useState('')
   const [showDesktopKeypad, setShowDesktopKeypad] = useState(false)
   const [wrongFeedback, setWrongFeedback] = useState(false)
+  const [shortcutBindings, setShortcutBindings] = useState(
+    createInitialShortcutBindings,
+  )
   const [soundEnabled, setSoundEnabled] = useState(() => {
     if (typeof window === 'undefined') {
       return true
@@ -171,6 +187,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_SOUND, soundEnabled ? 'on' : 'off')
   }, [soundEnabled])
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_SHORTCUTS, JSON.stringify(shortcutBindings))
+  }, [shortcutBindings])
 
   useEffect(() => {
     let cancelled = false
@@ -426,7 +446,66 @@ function App() {
     setAnswer('')
   }, [playTone, view])
 
+  const startShortcutCapture = useCallback((actionId) => {
+    setCaptureShortcutActionId(actionId)
+  }, [])
+
+  const resetShortcutBindings = useCallback(() => {
+    setShortcutBindings(sanitizeShortcutBindings(DEFAULT_SHORTCUT_BINDINGS))
+    setCaptureShortcutActionId(null)
+    setToast('快捷键已恢复默认')
+  }, [])
+
   useEffect(() => {
+    if (shortcutDialogOpen && captureShortcutActionId) {
+      const onCaptureKeyDown = (event) => {
+        if (event.ctrlKey || event.metaKey || event.altKey) {
+          return
+        }
+
+        if (isModifierOnlyEvent(event)) {
+          return
+        }
+
+        event.preventDefault()
+
+        if (event.key === 'Escape') {
+          setCaptureShortcutActionId(null)
+          return
+        }
+
+        if (isReservedAnswerKey(event)) {
+          setToast('数字键保留给答题输入，请换一个按键')
+          return
+        }
+
+        const code = normalizeShortcutEvent(event)
+
+        if (!code) {
+          return
+        }
+
+        setShortcutBindings((current) => {
+          const next = { ...current }
+
+          Object.keys(next).forEach((actionId) => {
+            if (next[actionId] === code) {
+              next[actionId] = null
+            }
+          })
+
+          next[captureShortcutActionId] = code
+          return sanitizeShortcutBindings(next)
+        })
+
+        setCaptureShortcutActionId(null)
+        setToast('快捷键已更新')
+      }
+
+      window.addEventListener('keydown', onCaptureKeyDown)
+      return () => window.removeEventListener('keydown', onCaptureKeyDown)
+    }
+
     if (view !== 'practice' && view !== 'results') {
       return undefined
     }
@@ -458,13 +537,19 @@ function App() {
         return
       }
 
-      if (view === 'practice' && event.key === 'Enter') {
+      if (view === 'practice' && matchesShortcut(event, shortcutBindings.submit)) {
         event.preventDefault()
         submitAnswer()
         return
       }
 
-      if (event.key.toLowerCase() === 'r') {
+      if (view === 'practice' && matchesShortcut(event, shortcutBindings.delete)) {
+        event.preventDefault()
+        deleteDigit()
+        return
+      }
+
+      if (matchesShortcut(event, shortcutBindings.restart)) {
         event.preventDefault()
         restartPractice()
       }
@@ -477,6 +562,11 @@ function App() {
     clearAnswer,
     deleteDigit,
     restartPractice,
+    shortcutBindings.delete,
+    shortcutBindings.restart,
+    shortcutBindings.submit,
+    shortcutDialogOpen,
+    captureShortcutActionId,
     submitAnswer,
     view,
   ])
@@ -511,6 +601,7 @@ function App() {
           onDelete={deleteDigit}
           onGoHome={goHome}
           onOpenSettings={() => setSettingsModeId(activeMode.id)}
+          onOpenShortcutMap={() => setShortcutDialogOpen(true)}
           onRestart={restartPractice}
           onSubmit={() => submitAnswer()}
           onToggleDesktopKeypad={() =>
@@ -518,6 +609,7 @@ function App() {
           }
           problem={currentProblem}
           quantity={problems.length}
+          shortcutBindings={shortcutBindings}
           showDesktopKeypad={showDesktopKeypad}
           soundEnabled={soundEnabled}
           toggleSound={() => setSoundEnabled((current) => !current)}
@@ -566,6 +658,19 @@ function App() {
           onClose={() => setSummaryOpen(false)}
           onRestart={restartPractice}
           formatDuration={formatDuration}
+        />
+      )}
+
+      {shortcutDialogOpen && (
+        <ShortcutDialog
+          bindings={shortcutBindings}
+          captureActionId={captureShortcutActionId}
+          onClose={() => {
+            setShortcutDialogOpen(false)
+            setCaptureShortcutActionId(null)
+          }}
+          onResetDefaults={resetShortcutBindings}
+          onStartCapture={startShortcutCapture}
         />
       )}
 
