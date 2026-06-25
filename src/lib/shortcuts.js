@@ -29,9 +29,8 @@ export const SHORTCUT_ACTIONS = [
   {
     id: 'clear',
     label: '清除',
-    description: '不设置快捷键',
-    defaultCode: null,
-    locked: true,
+    description: '默认不绑定，可自行设置',
+    defaultCode: DEFAULT_SHORTCUT_BINDINGS.clear,
   },
 ]
 
@@ -69,11 +68,6 @@ export function sanitizeShortcutBindings(bindings = {}) {
   const nextBindings = {}
 
   for (const action of SHORTCUT_ACTIONS) {
-    if (action.locked) {
-      nextBindings[action.id] = null
-      continue
-    }
-
     const requestedCode = sanitizeShortcutCode(bindings[action.id])
     const fallbackCode = sanitizeShortcutCode(action.defaultCode)
     const code =
@@ -86,7 +80,6 @@ export function sanitizeShortcutBindings(bindings = {}) {
     }
   }
 
-  nextBindings.clear = null
   return nextBindings
 }
 

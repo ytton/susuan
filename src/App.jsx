@@ -548,6 +548,12 @@ function App() {
         return
       }
 
+      if (view === 'practice' && matchesShortcut(event, shortcutBindings.clear)) {
+        event.preventDefault()
+        clearAnswer()
+        return
+      }
+
       if (matchesShortcut(event, shortcutBindings.restart)) {
         event.preventDefault()
         restartPractice()
@@ -561,6 +567,7 @@ function App() {
     clearAnswer,
     deleteDigit,
     restartPractice,
+    shortcutBindings.clear,
     shortcutBindings.delete,
     shortcutBindings.restart,
     shortcutBindings.submit,
